@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>rqt_test</name>
+  <name>raspi-ros-rqt</name>
   <version>0.0.0</version>
   <description>The rqt_test package</description>
 

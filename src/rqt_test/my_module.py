@@ -1,11 +1,15 @@
 import os
 import rospy
 import rospkg
+import rosservice
+
+
+from digital_interface_msgs.srv import ConfigRead, ConfigSet,ConfigSetRequest
 
 
 from qt_gui.plugin import Plugin
 #from python_qt_binding import loadUi
-from python_qt_binding.QtWidgets import QWidget, QGroupBox, QVBoxLayout, QCheckBox, QPushButton, QLabel, QHBoxLayout
+from python_qt_binding.QtWidgets import QWidget, QGroupBox, QVBoxLayout, QCheckBox, QPushButton, QLabel, QHBoxLayout, QLineEdit
 from python_qt_binding.QtCore import  QTimer
 
 class MyPlugin(Plugin):
@@ -13,6 +17,8 @@ class MyPlugin(Plugin):
     def __init__(self, context):
         self._sim_namespace = "/simulate/"
         self.groupbox = None
+
+        self.active_module_template = "None"
 
         super(MyPlugin, self).__init__(context)
         # Give QObjects reasonable names
@@ -35,8 +41,10 @@ class MyPlugin(Plugin):
         self._widget = QWidget()
         self._layout  = QVBoxLayout()
         self.button1 = QPushButton("Update simulation interface")
+        self.button_template = QPushButton("Select RASPI template to change")
 
         self._layout.addWidget(self.button1)
+        self._layout.addWidget(self.button_template)
         #self._layout.addStretch()
         self._widget.setLayout(self._layout)
         # Get path to UI file which should be in the "resource" folder of this package
@@ -51,7 +59,7 @@ class MyPlugin(Plugin):
 
         #print(self._widget)
         self.button1.clicked[bool].connect(self.update_layout)
-
+        self.button_template.clicked[bool].connect(self.select_template)
 
 
         # Show _widget.windowTitle on left-top of each plugin (when 
@@ -74,7 +82,7 @@ class MyPlugin(Plugin):
 
         # Start a timer to trigger updates
         self._update_timer = QTimer()
-        self._update_timer.setInterval(1000)
+        self._update_timer.setInterval(500)
         self._update_timer.timeout.connect(self.update_values)
         self._update_timer.start()
 
@@ -179,19 +187,130 @@ class MyPlugin(Plugin):
         self._layout.addWidget(groupbox)
         #self._context.add_widget(groupbox)
 
-        print(module_list)
+        
         print("updating layout")
         self.update_values()
 
 
         pass
+    def select_template(self):
+
+        service_list=rosservice.get_service_list()
+            #search for the configuration services
+        raspi_services=[]
+        for i in service_list:
+            if 'config_set_new' in i:
+                i = i.replace('config_set_new','')
+                raspi_services.append(i)
+
+        if len(raspi_services)==0:
+            label_1 = QLabel("No Raspberries services in reach!")
+            print('Hello! I\'m Rassberry ROS configuration client. No Raspberries services in my reach!')
+            return
+
+        else:    
+            label_1 = QLabel("Raspberries in reach:")
+            
+        groupbox = QGroupBox("Raspberries templates")
+        layout = QVBoxLayout()
+        layout.addWidget(label_1)
+
+        j=0
+        for i in raspi_services:
+            j=j+1
+            button = QPushButton(str(j)+'.  '+str(i))
+            name = str(i)
+            #button.clicked[bool].connect(lambda state, x=name: self.change_template(name))
+            button.clicked[bool].connect(self.change_template(name))
+            #label_1 = QLabel(str(j)+'.  '+str(i))
+            layout.addWidget(button)
+            del button
+            #print(str(j)+'.  '+str(i))
+
+        layout.addStretch()
+        groupbox.setLayout(layout)
+        self._layout.addWidget(groupbox)    
+
+        pass
+
+    def change_template(self,name):
+        def this_template():
+
+            self.active_module_template=name
+            demand_name=self.active_module_template+'config_read_current'
+
+            read_proxy= rospy.ServiceProxy(demand_name, ConfigRead)
+
+            self.template_msg = read_proxy().config
+
+
+            
+ 
+        return this_template
+
     def create_one_group(self):
         pass
 
+    def load_template(self):
+        print("load TEMPLAT")
+        groupbox = QGroupBox(self.active_module_template)
+        layout = QVBoxLayout()
+
+
+        for i in self.template_msg.pin_configs:
+            h_layout = QHBoxLayout()
+                  
+            
+
+
+
+            label_1 = QLabel("Pin number: "+str(i.pin_number))
+
+            h_layout.addWidget(label_1)
+
+            label_2 = QLabel("Service name: ")
+
+            h_layout.addWidget(label_2)
+            lineEdit =  QLineEdit()
+            lineEdit.setText(i.service_name)
+            h_layout.addWidget(lineEdit)
+            for j in i.available_config:
+                config_chose= QLabel(j)
+                h_layout.addWidget(config_chose)
+
+            
+
+
+            h_layout.addStretch()
+            layout.addLayout(h_layout)
+
+
+        layout.addStretch()
+        groupbox.setLayout(layout)
+
+        self.templatebox=groupbox
+        self._layout.addWidget(groupbox)
+        self.active_module_template="None"
+
+        pass
+
+    def delete_template_layout(self):
+
+        self.templatebox.deleteLater()
+        print("deliting trem")
+        pass
+
     def update_values(self):
-        print("update values")
-        print(self.param_list)
-        print(self.input_interface_dict)
+        #print("update values")
+        #print(self.param_list)
+        #print(self.input_interface_dict)
+
+        if self.active_module_template !="None":
+            try:
+                self.delete_template_layout()
+            except:
+                pass
+            self.load_template()
 
         for param in self.output_interface_dict:
 
@@ -209,14 +328,14 @@ class MyPlugin(Plugin):
 
     def demo_test(self):
 
-        rospy.set_param(self._sim_namespace+'tool1/celinder/value',True)
-        rospy.set_param(self._sim_namespace+'tool1/celinder/type',"DO")
+        rospy.set_param(self._sim_namespace+'modul_1/celinder/value',True)
+        rospy.set_param(self._sim_namespace+'modul_1/celinder/type',"DO")
 
-        rospy.set_param(self._sim_namespace+'tool1/koncno/value',False)
-        rospy.set_param(self._sim_namespace+'tool1/koncno/type',"DI")
+        rospy.set_param(self._sim_namespace+'modul_1/koncno/value',False)
+        rospy.set_param(self._sim_namespace+'modul_1/koncno/type',"DI")
 
-        rospy.set_param(self._sim_namespace+'tool2/pihanje/value',False)
-        rospy.set_param(self._sim_namespace+'tool2/pihanje/type',"DO")
+        rospy.set_param(self._sim_namespace+'modul_2/pihanje/value',False)
+        rospy.set_param(self._sim_namespace+'modul_2/pihanje/type',"DO")
         
         pass
 
