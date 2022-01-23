@@ -9,7 +9,7 @@ from digital_interface_msgs.srv import ConfigRead, ConfigSet,ConfigSetRequest
 
 from qt_gui.plugin import Plugin
 #from python_qt_binding import loadUi
-from python_qt_binding.QtWidgets import QWidget, QGroupBox, QVBoxLayout, QCheckBox, QPushButton, QLabel, QHBoxLayout, QLineEdit
+from python_qt_binding.QtWidgets import QWidget, QGroupBox, QVBoxLayout, QCheckBox, QPushButton, QLabel, QHBoxLayout, QLineEdit, QRadioButton, QButtonGroup
 from python_qt_binding.QtCore import  QTimer
 
 class MyPlugin(Plugin):
@@ -19,6 +19,8 @@ class MyPlugin(Plugin):
         self.groupbox = None
 
         self.active_module_template = "None"
+        self.template_config_list = []
+        self.templates_in_reach_box = "None"
 
         super(MyPlugin, self).__init__(context)
         # Give QObjects reasonable names
@@ -45,7 +47,8 @@ class MyPlugin(Plugin):
 
         self._layout.addWidget(self.button1)
         self._layout.addWidget(self.button_template)
-        #self._layout.addStretch()
+
+        self._layout.addStretch()
         self._widget.setLayout(self._layout)
         # Get path to UI file which should be in the "resource" folder of this package
         #ui_file = os.path.join(rospkg.RosPack().get_path('rqt_test'), 'resource', 'MyPlugin.ui')
@@ -77,7 +80,8 @@ class MyPlugin(Plugin):
         self.input_interface_dict = {}
         self.output_interface_dict = {}
         self.param_list = []
-        self.demo_test()
+
+        #self.demo_test()
 
 
         # Start a timer to trigger updates
@@ -118,34 +122,50 @@ class MyPlugin(Plugin):
         self.output_interface_dict = {}
 
         last_module = ""
-        groupbox = QGroupBox("GroupBoxExample")
+        groupbox = QGroupBox("Values of simulated modules IOs")
 
-        layout=QVBoxLayout()
+        list_layout=QVBoxLayout()
+        #list_layout.addStretch()
+
+
+
+   
+        first=True
         for i in param_list:
+            
+
             if i.find(self._sim_namespace) != -1:
-  
+                
                 j = i.replace(self._sim_namespace,"")
                 in_te = j.find("/")
 
                 if in_te != -1:
+                    
                     module_name=j[0:in_te]
 
+
                     if last_module != module_name:
+
+                        last_module = module_name  
+                        if first==True:
+                            first = False
+                             
+                        else:
+    
+                            modulebox.setLayout(module_layout)
+                        #h_dummy = QHBoxLayout()
+                        #h_dummy.insertWidget(-1,modulebox)
+                        #list_layout.addLayout(h_dummy)
+                            list_layout.insertWidget(list_layout.count()-1,modulebox)
+
                         modulebox = QGroupBox(module_name)
-                        #modulebox.setFixedSize(300,40)
                         module_layout = QVBoxLayout()
 
-                        last_module = module_name
-                        #self._widget.addWidget(buttom)
-                        #self._context.add_widget(groupbox)
 
                     if j[j.rfind("/")+1:]=="type":
-
                         interface_type=rospy.get_param(i)
-
-
-
-         
+    
+            
                         if interface_type=="DO":
                     
 
@@ -161,79 +181,88 @@ class MyPlugin(Plugin):
                             label_1 = QCheckBox("")
                             self.input_interface_dict[i.replace("type","value")]=label_1
 
-                        #module_layout.addWidget(buttom)
                         h_layout = QHBoxLayout()
-                  
-                        h_layout.addWidget(label_1)
+                        #h_layout.addStretch()
+                        h_layout.insertWidget(h_layout.count()-1,label_1)
                         label_name = QLabel(j[in_te+1:j.rfind("/")])
-                        h_layout.addWidget(label_name)
-                        h_layout.addStretch()
+                        h_layout.insertWidget(h_layout.count()-1,label_name)                      
                         module_layout.addLayout(h_layout)
-
-
-                        modulebox.setLayout(module_layout)
-                        layout.addWidget(modulebox)
-
-
 
                         self.param_list.append(i.replace("type","value"))
 
+
+
+        if first==False:
+            modulebox.setLayout(module_layout)
+            list_layout.insertWidget(list_layout.count()-1,modulebox)
+
                 #self.interface_dict['new']=label_1
 
-                #module_list.append(k)
-        layout.addStretch()
-        groupbox.setLayout(layout)
+        #layout.addStretch()
+        print(list_layout.count())
+        groupbox.setLayout(list_layout)
+        groupbox.adjustSize()
         self.groupbox =  groupbox
-        self._layout.addWidget(groupbox)
+        self._layout.insertWidget(self._layout.count()-1,groupbox)   
+        #self._layout.addStretch()
         #self._context.add_widget(groupbox)
-
+        #self._layout.addStretch()
+        self._widget.setLayout(self._layout)
+        self._widget.adjustSize()
         
-        print("updating layout")
         self.update_values()
 
 
         pass
+
     def select_template(self):
 
-        service_list=rosservice.get_service_list()
-            #search for the configuration services
-        raspi_services=[]
-        for i in service_list:
-            if 'config_set_new' in i:
-                i = i.replace('config_set_new','')
-                raspi_services.append(i)
 
-        if len(raspi_services)==0:
-            label_1 = QLabel("No Raspberries services in reach!")
-            print('Hello! I\'m Rassberry ROS configuration client. No Raspberries services in my reach!')
-            return
+        if self.templates_in_reach_box == "None":
+            service_list=rosservice.get_service_list()
+                #search for the configuration services
+            raspi_services=[]
+            for i in service_list:
+                if 'config_set_new' in i:
+                    i = i.replace('config_set_new','')
+                    raspi_services.append(i)
 
-        else:    
-            label_1 = QLabel("Raspberries in reach:")
-            
-        groupbox = QGroupBox("Raspberries templates")
-        layout = QVBoxLayout()
-        layout.addWidget(label_1)
+            if len(raspi_services)==0:
+                label_1 = QLabel("No Raspberries services in reach!")
+                print('Hello! I\'m Rassberry ROS configuration client. No Raspberries services in my reach!')
+                return
 
-        j=0
-        for i in raspi_services:
-            j=j+1
-            button = QPushButton(str(j)+'.  '+str(i))
-            name = str(i)
-            #button.clicked[bool].connect(lambda state, x=name: self.change_template(name))
-            button.clicked[bool].connect(self.change_template(name))
-            #label_1 = QLabel(str(j)+'.  '+str(i))
-            layout.addWidget(button)
-            del button
-            #print(str(j)+'.  '+str(i))
+            else:    
+                label_1 = QLabel("Raspberries in reach:")
+                
+            groupbox = QGroupBox("Raspberries templates")
+            layout = QVBoxLayout()
+            layout.addWidget(label_1)
 
-        layout.addStretch()
-        groupbox.setLayout(layout)
-        self._layout.addWidget(groupbox)    
+            j=0
+            for i in raspi_services:
+                j=j+1
+                button = QPushButton(str(j)+'.  '+str(i))
+                name = str(i)
+                #button.clicked[bool].connect(lambda state, x=name: self.change_template(name))
+                button.clicked[bool].connect(self.change_template(name))
+                #label_1 = QLabel(str(j)+'.  '+str(i))
+                layout.addWidget(button)
+                del button
+                #print(str(j)+'.  '+str(i))
 
+            #layout.addStretch()
+            groupbox.setLayout(layout)
+            groupbox.adjustSize()
+            self.templates_in_reach_box = groupbox
+            self._layout.insertWidget(self._layout.count()-1,groupbox)    
+            #self._layout.addStretch()
+            self._widget.setLayout(self._layout)
+            self._widget.adjustSize()
         pass
 
     def change_template(self,name):
+
         def this_template():
 
             self.active_module_template=name
@@ -255,15 +284,13 @@ class MyPlugin(Plugin):
         print("load TEMPLAT")
         groupbox = QGroupBox(self.active_module_template)
         layout = QVBoxLayout()
+        save_button = QPushButton("Save and send template")
+        layout.addWidget(save_button)
 
 
         for i in self.template_msg.pin_configs:
             h_layout = QHBoxLayout()
                   
-            
-
-
-
             label_1 = QLabel("Pin number: "+str(i.pin_number))
 
             h_layout.addWidget(label_1)
@@ -274,10 +301,22 @@ class MyPlugin(Plugin):
             lineEdit =  QLineEdit()
             lineEdit.setText(i.service_name)
             h_layout.addWidget(lineEdit)
-            for j in i.available_config:
-                config_chose= QLabel(j)
-                h_layout.addWidget(config_chose)
 
+            button_group= QButtonGroup()
+            radio_layout = QHBoxLayout()
+            self.template_config_list=[]
+            for j in i.available_config:
+                config_chose= QRadioButton(j)
+                self.template_config_list.append(config_chose)
+                if j == i.actual_config:
+                    config_chose.setChecked(True)
+
+                radio_layout.addWidget(config_chose)
+                button_group.addButton(config_chose)
+
+            button_group.setExclusive(True)    
+            #button_group.set_layout(radio_layout)
+            h_layout.addLayout(radio_layout)
             
 
 
@@ -289,7 +328,7 @@ class MyPlugin(Plugin):
         groupbox.setLayout(layout)
 
         self.templatebox=groupbox
-        self._layout.addWidget(groupbox)
+        self._layout.insertWidget(self._layout.count()-1,groupbox)
         self.active_module_template="None"
 
         pass
@@ -316,7 +355,7 @@ class MyPlugin(Plugin):
 
 
             value=rospy.get_param(param)
-            print(value)
+            #print(value)
             label=self.output_interface_dict[param]
             if value==False:
                 label.setStyleSheet("border: 1px solid black; background-color: black")
