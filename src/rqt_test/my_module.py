@@ -283,12 +283,20 @@ class MyPlugin(Plugin):
     def load_template(self):
         print("load TEMPLAT")
         groupbox = QGroupBox(self.active_module_template)
+        self.active_module_adreass=self.active_module_template
         layout = QVBoxLayout()
-        save_button = QPushButton("Save and send template")
-        layout.addWidget(save_button)
+        self.save_button = QPushButton("Save and send template")
 
+        self.save_button.clicked[bool].connect(self.send_template)
+
+        layout.addWidget(self.save_button)
+
+        self.pin_buttoms=[]
 
         for i in self.template_msg.pin_configs:
+            pin_interface = {}
+
+
             h_layout = QHBoxLayout()
                   
             label_1 = QLabel("Pin number: "+str(i.pin_number))
@@ -300,6 +308,9 @@ class MyPlugin(Plugin):
             h_layout.addWidget(label_2)
             lineEdit =  QLineEdit()
             lineEdit.setText(i.service_name)
+
+            pin_interface["service_name"] = lineEdit
+
             h_layout.addWidget(lineEdit)
 
             button_group= QButtonGroup()
@@ -314,11 +325,12 @@ class MyPlugin(Plugin):
                 radio_layout.addWidget(config_chose)
                 button_group.addButton(config_chose)
 
-            button_group.setExclusive(True)    
+            button_group.setExclusive(True)   
+            pin_interface["buttoms"]=button_group
             #button_group.set_layout(radio_layout)
             h_layout.addLayout(radio_layout)
             
-
+            self.pin_buttoms.append(pin_interface)
 
             h_layout.addStretch()
             layout.addLayout(h_layout)
@@ -338,6 +350,31 @@ class MyPlugin(Plugin):
         self.templatebox.deleteLater()
         print("deliting trem")
         pass
+
+
+    def send_template(self):
+
+        template_msgs=ConfigSetRequest
+        c=0
+        for i in self.pin_buttoms:
+            self.template_msg.pin_configs[c] 
+            #template_msgs.config.pin_configs[c].pin_number = i
+            self.template_msg.pin_configs[c] .actual_config = i["buttoms"].checkedButton().text()
+            if i["buttoms"].checkedButton().text()=="empty":
+                self.template_msg.pin_configs[c] .service_name = ""
+            else:
+                self.template_msg.pin_configs[c] .service_name = i["service_name"].text()
+            #print(i["service_name"].text())
+            #print(i["buttoms"].checkedButton().text())
+            c=c+1
+        #print(self.template_msg)
+        print('Sending config')
+        #print(self.active_module_adreass+"config_set_new")
+        
+        write_proxy = rospy.ServiceProxy(self.active_module_adreass+"config_set_new", ConfigSet)
+
+        response = write_proxy(self.template_msg)   
+
 
     def update_values(self):
         #print("update values")
