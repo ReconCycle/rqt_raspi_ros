@@ -11,6 +11,7 @@ from qt_gui.plugin import Plugin
 #from python_qt_binding import loadUi
 from python_qt_binding.QtWidgets import QWidget, QGroupBox, QVBoxLayout, QCheckBox, QPushButton, QLabel, QHBoxLayout, QLineEdit, QRadioButton, QButtonGroup
 from python_qt_binding.QtCore import  QTimer
+from python_qt_binding.QtGui import  QPixmap
 
 class MyPlugin(Plugin):
 
@@ -39,9 +40,35 @@ class MyPlugin(Plugin):
             print('arguments: ', args)
             print('unknowns: ', unknowns)
 
+
+        # creating label
+        self.label = QLabel("")
+         
+        # loading image
+        path=os.path.dirname(os.path.realpath(__file__)) 
+        print(path+"/reconcycle-logo-head.png")
+        self.pixmap = QPixmap(path+"/reconcycle-logo-head.png")
+        #self.pixmap = QPixmap("Blue_dot.png", format = "png")
+        print(self.pixmap)
+        #print(self.pixmap.load('reconcycle-logo-head.png'))
+        print(self.pixmap.width())
+        print(self.pixmap.height())
+
+ 
+        # adding image to label
+        self.label.setPixmap(self.pixmap)
+ 
+        # Optional, resize label to image size
+        self.label.resize(self.pixmap.width(),
+                          self.pixmap.height())
+
+        
+
         # Create QWidget
         self._widget = QWidget()
         self._layout  = QVBoxLayout()
+        self._layout.addWidget(self.label)
+
         self.button1 = QPushButton("Update simulation interface")
         self.button_template = QPushButton("Select RASPI template to change")
 
