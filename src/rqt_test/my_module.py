@@ -171,6 +171,8 @@ class MyPlugin(Plugin):
                     module_name=j[0:in_te]
 
 
+
+
                     if last_module != module_name:
 
                         last_module = module_name  
@@ -190,6 +192,8 @@ class MyPlugin(Plugin):
 
 
                     if j[j.rfind("/")+1:]=="type":
+
+
                         interface_type=rospy.get_param(i)
     
             
@@ -209,9 +213,18 @@ class MyPlugin(Plugin):
                             self.input_interface_dict[i.replace("type","value")]=label_1
 
                         h_layout = QHBoxLayout()
-                        #h_layout.addStretch()
+
+                        h_layout.addStretch()
                         h_layout.insertWidget(h_layout.count()-1,label_1)
-                        label_name = QLabel(j[in_te+1:j.rfind("/")])
+
+
+                        io_names = self.get_pin_names(module_name)
+
+                        #print(io_names[int(j[in_te+1:j.rfind("/")])-1].service_name)
+                        #label_name = QLabel(j[in_te+1:j.rfind("/")])
+                        label_name = QLabel(io_names[int(j[in_te+1:j.rfind("/")])-1].service_name)
+
+
                         h_layout.insertWidget(h_layout.count()-1,label_name)                      
                         module_layout.addLayout(h_layout)
 
@@ -303,9 +316,26 @@ class MyPlugin(Plugin):
             
  
         return this_template
+ 
 
     def create_one_group(self):
         pass
+
+    def get_pin_names(self,module_name):
+
+        #def this_template():
+
+        demand_name='/'+module_name+'_manager/'+'config_read_current'
+        #print(demand_name)
+        read_proxy= rospy.ServiceProxy(demand_name, ConfigRead)
+
+        template_msg = read_proxy().config
+
+        return template_msg.pin_configs
+
+
+        #return this_template()
+
 
     def load_template(self):
         print("load TEMPLAT")
@@ -426,6 +456,10 @@ class MyPlugin(Plugin):
             elif value==True:    
                 label.setStyleSheet("border: 1px solid black; background-color: green")
 
+        for param in self.input_interface_dict:
+            value=self.input_interface_dict[param].isChecked() 
+            rospy.set_param(param,value)
+            
 
         pass
 
