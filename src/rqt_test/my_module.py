@@ -3,15 +3,18 @@ import rospy
 import rospkg
 import rosservice
 
+import yaml
+
 
 from digital_interface_msgs.srv import ConfigRead, ConfigSet,ConfigSetRequest
 
 
 from qt_gui.plugin import Plugin
 #from python_qt_binding import loadUi
-from python_qt_binding.QtWidgets import QWidget, QGroupBox, QVBoxLayout, QCheckBox, QPushButton, QLabel, QHBoxLayout, QLineEdit, QRadioButton, QButtonGroup
+from python_qt_binding.QtWidgets import QWidget, QGroupBox, QVBoxLayout, QCheckBox, QPushButton, QLabel, QHBoxLayout, QLineEdit, QRadioButton, QButtonGroup, QFileDialog
 from python_qt_binding.QtCore import  QTimer
 from python_qt_binding.QtGui import  QPixmap
+
 
 class MyPlugin(Plugin):
 
@@ -336,17 +339,60 @@ class MyPlugin(Plugin):
 
         #return this_template()
 
+    def file_save_as(self):
+        dlg = QFileDialog()  
+        name = dlg.getSaveFileName()
+        name = QtGui.QFileDialog.getSaveFileName(self, 'Save File')
+        file = open(name,'w')
+        text = self.textEdit.toPlainText()
+        file.write(text)
+        file.close()
+
+
+    def getfiles(self):
+        print("get files")
+        dlg = QFileDialog()  
+        dlg.setFileMode(QFileDialog.AnyFile)
+        dlg.setNameFilter("YAML template files (*.yaml)")
+        name = dlg.getOpenFileName()[0]
+        print(name)
+        #read configuration
+        with open(name, 'r') as file:
+            config= yaml.load(file)
+        print(config)
+        n= 0
+        for i in config['pin_configs']:
+
+            print(i['service_name'])
+            self.template_msg.pin_configs[n].service_name = i['service_name']
+            print(self.template_msg.pin_configs[n].service_name)
+            self.template_msg.pin_configs[n].pin_number = i['pin_number']
+            self.template_msg.pin_configs[n].actual_config = i['actual_config']
+            self.template_msg.pin_configs[n].available_config =i['available_config']
+
+
+            n=n+1
+
+        self.active_module_template = self.old_active_module_template # for restarting updeting values
+  
+        
 
     def load_template(self):
         print("load TEMPLAT")
         groupbox = QGroupBox(self.active_module_template)
+        self.old_active_module_template = self.active_module_template
         self.active_module_adreass=self.active_module_template
         layout = QVBoxLayout()
-        self.save_button = QPushButton("Save and send template")
+        self.save_button = QPushButton("Send template to module")
+        self.save_as_button = QPushButton("Save template as ...")
+        self.load_button = QPushButton("Load template localy")
 
         self.save_button.clicked[bool].connect(self.send_template)
+        self.load_button.clicked[bool].connect(self.getfiles)
 
         layout.addWidget(self.save_button)
+        layout.addWidget(self.save_as_button)
+        layout.addWidget(self.load_button)
 
         self.pin_buttoms=[]
 
@@ -434,6 +480,7 @@ class MyPlugin(Plugin):
 
 
     def update_values(self):
+        
         #print("update values")
         #print(self.param_list)
         #print(self.input_interface_dict)
