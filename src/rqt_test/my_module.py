@@ -8,6 +8,7 @@ import yaml
 
 from digital_interface_msgs.srv import ConfigRead, ConfigSet,ConfigSetRequest
 
+from rospy_message_converter import message_converter
 
 from qt_gui.plugin import Plugin
 #from python_qt_binding import loadUi
@@ -340,13 +341,26 @@ class MyPlugin(Plugin):
         #return this_template()
 
     def file_save_as(self):
+        print("save files")
         dlg = QFileDialog()  
-        name = dlg.getSaveFileName()
-        name = QtGui.QFileDialog.getSaveFileName(self, 'Save File')
-        file = open(name,'w')
-        text = self.textEdit.toPlainText()
-        file.write(text)
-        file.close()
+        dlg.setNameFilter("YAML template files (*.yaml)")
+        name = dlg.getSaveFileName()[0]
+        print(name)
+
+        template_msgs=self.read_values_from_window()
+        
+        config_dict = message_converter.convert_ros_message_to_dictionary(template_msgs)
+
+
+        print(config_dict)
+
+        with open(name, 'w') as file:
+            documents = yaml.safe_dump(config_dict, file)
+
+   
+        
+        #file.write(text)
+        #file.close()
 
 
     def getfiles(self):
@@ -388,6 +402,7 @@ class MyPlugin(Plugin):
         self.load_button = QPushButton("Load template localy")
 
         self.save_button.clicked[bool].connect(self.send_template)
+        self.save_as_button.clicked[bool].connect(self.file_save_as)
         self.load_button.clicked[bool].connect(self.getfiles)
 
         layout.addWidget(self.save_button)
@@ -457,20 +472,7 @@ class MyPlugin(Plugin):
 
     def send_template(self):
 
-        template_msgs=ConfigSetRequest
-        c=0
-        for i in self.pin_buttoms:
-            self.template_msg.pin_configs[c] 
-            #template_msgs.config.pin_configs[c].pin_number = i
-            self.template_msg.pin_configs[c] .actual_config = i["buttoms"].checkedButton().text()
-            if i["buttoms"].checkedButton().text()=="empty":
-                self.template_msg.pin_configs[c] .service_name = ""
-            else:
-                self.template_msg.pin_configs[c] .service_name = i["service_name"].text()
-            #print(i["service_name"].text())
-            #print(i["buttoms"].checkedButton().text())
-            c=c+1
-        #print(self.template_msg)
+        template_msgs=self.read_values_from_window()
         print('Sending config')
         #print(self.active_module_adreass+"config_set_new")
         
@@ -478,6 +480,23 @@ class MyPlugin(Plugin):
 
         response = write_proxy(self.template_msg)   
 
+    def read_values_from_window(self):
+
+       
+        c=0
+        for i in self.pin_buttoms:
+            self.template_msg.pin_configs[c] 
+            #template_msgs.config.pin_configs[c].pin_number = i
+            self.template_msg.pin_configs[c].actual_config = i["buttoms"].checkedButton().text()
+            if i["buttoms"].checkedButton().text()=="empty":
+                self.template_msg.pin_configs[c].service_name = ""
+            else:
+                self.template_msg.pin_configs[c].service_name = i["service_name"].text()
+            #print(i["service_name"].text())
+            #print(i["buttoms"].checkedButton().text())
+            c=c+1
+        #print(self.template_msg)
+        return self.template_msg
 
     def update_values(self):
         
